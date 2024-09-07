@@ -10,7 +10,9 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "bcrypt": "^5.1.1",
         "express": "^4.17.1",
+        "jsonwebtoken": "^9.0.2",
         "mailgun-js": "^0.22.0",
         "mongoose": "^5.10.9",
         "openai": "^4.58.1",
