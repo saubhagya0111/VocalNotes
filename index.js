@@ -27,16 +27,25 @@ app.use(bodyParser.json());
 
 app.post('/register', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
-    const user = new User({ email, password });
-    await user.save();
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    res.status(201).json({ message: 'User registered successfully', user });
+    // Create a new user with the role, default to 'user' if not specified
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      role: role || 'user'  // Defaults to 'user' if no role is provided
+    });
+
+    await newUser.save();
+    res.status(201).json({ message: 'User registered successfully', user: newUser });
   } catch (err) {
-    res.status(400).json({ message: 'Error registering user', error: err.message });
+    res.status(500).json({ message: 'Error registering user', error: err.message });
   }
 });
+
 
 
 const bcrypt = require('bcrypt');
@@ -201,4 +210,17 @@ app.get('/models', async (req, res) => {
     console.error('Error fetching models:', error);
     res.status(500).json({ message: 'Failed to fetch models', error: error.message });
   }
+});
+
+//defining the routes of /admin and /user
+const authMiddleware = require('./middleware/auth');
+
+// Admin-only route
+app.get('/admin', authMiddleware('admin'), (req, res) => {
+  res.status(200).send('Welcome, Admin!');
+});
+
+// User route (accessible by all users)
+app.get('/user-dashboard', authMiddleware('user'), (req, res) => {
+  res.status(200).send('Welcome to your dashboard, user!');
 });
