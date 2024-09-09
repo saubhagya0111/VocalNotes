@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 require('dotenv').config();  // This loads variables from .env into process.env
+const axios = require('axios');
 
 const app = express();
 const port = 3000;
@@ -159,26 +160,40 @@ app.post('/transcribe', upload, async (req, res) => {
   }
 
   try {
-    // Path to the uploaded file
-    const audioFilePath = `./uploads/${req.file.filename}`;
-    const audioFile = fs.createReadStream(audioFilePath);
+    //Actual logic for sending the data to OpenAI API 
+     // Path to the uploaded file
+     const audioFilePath = `./uploads/${req.file.filename}`;
+     const audioFile = fs.createReadStream(audioFilePath);
+ 
+     // Send file to OpenAI's Whisper API for transcription
+     const response = await openai.audio.transcriptions.create({
+       model: 'whisper-1', // OpenAI Whisper model for transcription
+       file: audioFile,
+     });
+ 
+     // Extract transcription text from the response
+     const transcription = response.text;
 
-    // Send file to OpenAI's Whisper API for transcription
-    const response = await openai.audio.transcriptions.create({
-      model: 'whisper-1', // OpenAI Whisper model for transcription
-      file: audioFile,
+     // Logic to save transcription to the database
+    const newTranscription = new Transcription({
+      user: req.user ? req.user._id : null,  // If user authentication is in place
+      file: req.file.filename,               // File name of the audio file
+      transcription: transcription      // Transcribed text
     });
 
-    // Extract transcription text from the response
-    const transcription = response.text;
+    // Save the new transcription to the database
+    await newTranscription.save();
 
-    // Return the transcription to the client
-    res.status(200).json({
-      message: 'Transcription successful',
-      transcription
-    });
+ 
+     // Return the transcription to the client
+     res.status(200).json({
+       message: 'Transcription successful',
+       transcription
+     });
+
   } catch (error) {
     res.status(500).json({ message: 'Transcription failed', error: error.message });
+    // res.status(500).json({ message: 'Error saving transcription', error: error.message });
   }
 });
 
@@ -223,4 +238,20 @@ app.get('/admin', authMiddleware('admin'), (req, res) => {
 // User route (accessible by all users)
 app.get('/user-dashboard', authMiddleware('user'), (req, res) => {
   res.status(200).send('Welcome to your dashboard, user!');
+});
+
+//adding the transcriptions to the db
+const Transcription = require('./models/Transcription');
+const { exit } = require('process');
+app.get('/transcriptions', async (req, res) => {
+  try {
+    const transcriptions = await Transcription.find({});
+    console.log('Transcriptions fetched:', transcriptions);  // Log the transcriptions fetched
+    if (transcriptions.length === 0) {
+      return res.status(200).json([]);  
+    }
+    res.status(200).json(transcriptions);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching transcriptions', error: error.message });
+  }
 });
