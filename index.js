@@ -160,36 +160,39 @@ app.post('/transcribe', upload, async (req, res) => {
   }
 
   try {
+    //Mock data
+    // const transcription="Mock data"; 
     //Actual logic for sending the data to OpenAI API 
-     // Path to the uploaded file
-     const audioFilePath = `./uploads/${req.file.filename}`;
-     const audioFile = fs.createReadStream(audioFilePath);
- 
-     // Send file to OpenAI's Whisper API for transcription
-     const response = await openai.audio.transcriptions.create({
-       model: 'whisper-1', // OpenAI Whisper model for transcription
-       file: audioFile,
-     });
- 
-     // Extract transcription text from the response
-     const transcription = response.text;
+    // Path to the uploaded file
+    const audioFilePath = `./uploads/${req.file.filename}`;
+    const audioFile = fs.createReadStream(audioFilePath);
 
-     // Logic to save transcription to the database
+    // Send file to OpenAI's Whisper API for transcription
+    const response = await openai.audio.transcriptions.create({
+      model: 'whisper-1', // OpenAI Whisper model for transcription
+      file: audioFile,
+    });
+
+    // Extract transcription text from the response
+    const transcription = response.text;
+
+    // Logic to save transcription to the database
     const newTranscription = new Transcription({
       user: req.user ? req.user._id : null,  // If user authentication is in place
       file: req.file.filename,               // File name of the audio file
+      // transcription                    //Uncomment if mock data is to be used 
       transcription: transcription      // Transcribed text
     });
 
     // Save the new transcription to the database
     await newTranscription.save();
 
- 
-     // Return the transcription to the client
-     res.status(200).json({
-       message: 'Transcription successful',
-       transcription
-     });
+
+    // Return the transcription to the client
+    res.status(200).json({
+      message: 'Transcription successful',
+      transcription
+    });
 
   } catch (error) {
     res.status(500).json({ message: 'Transcription failed', error: error.message });
@@ -248,7 +251,7 @@ app.get('/transcriptions', async (req, res) => {
     const transcriptions = await Transcription.find({});
     console.log('Transcriptions fetched:', transcriptions);  // Log the transcriptions fetched
     if (transcriptions.length === 0) {
-      return res.status(200).json([]);  
+      return res.status(200).json([]);
     }
     res.status(200).json(transcriptions);
   } catch (error) {
