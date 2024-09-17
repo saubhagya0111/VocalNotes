@@ -4,6 +4,7 @@ const AudioRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   // Start recording using the MediaRecorder API
   const startRecording = async () => {
@@ -27,18 +28,27 @@ const AudioRecorder = () => {
     console.log('Recording stopped');
     setRecording(false);
   };
+    // Handle file upload selection
+    const handleFileSelect = (event) => {
+        setSelectedFile(event.target.files[0]);
+        console.log('Selected file:', event.target.files[0]);
+      };
 
   // Upload the audio file to the backend
   const uploadAudio = async () => {
-    if (!audioBlob) {
-      console.log('No audio data to upload');
+    const formData = new FormData();
+
+    if (audioBlob) {
+      formData.append('audio', audioBlob, 'recording.mp3');  // If recording exists, use it
+      console.log('Uploading recorded audio...');
+    } else if (selectedFile) {
+      formData.append('audio', selectedFile);  // If file is selected, use it
+      console.log('Uploading selected file...');
+    } else {
+      console.log('No audio or file selected for upload');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording.mp3');
-
-    console.log('Uploading audio to server...');
     const response = await fetch('http://localhost:5000/upload-audio', {
       method: 'POST',
       body: formData,
@@ -48,14 +58,22 @@ const AudioRecorder = () => {
     console.log('Server response:', result);
   };
 
+
   return (
     <div>
+    <div>
+        <h2>Upload or Record Audio</h2>
+        <label htmlFor="fileUpload">Upload Audio: </label>
+        <input type="file" id="fileUpload" accept="audio/*" onChange={handleFileSelect} />
+      </div>
+    <div>
       {!recording ? (
-        <button onClick={startRecording}>Start Recording</button>
-      ) : (
-        <button onClick={stopRecording}>Stop Recording</button>
-      )}
-      {audioBlob && <button onClick={uploadAudio}>Upload Recording</button>}
+          <button onClick={startRecording}>Start Recording</button>
+        ) : (
+            <button onClick={stopRecording}>Stop Recording</button>
+        )}
+      {(audioBlob || selectedFile) && <button onClick={uploadAudio}>Upload Recording</button>}
+     </div>
     </div>
   );
 };
