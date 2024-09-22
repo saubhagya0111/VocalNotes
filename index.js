@@ -122,7 +122,8 @@ const path = require('path');
 const storage = multer.diskStorage({
   destination: './uploads/',
   filename: (req, file, cb) => {
-    const fileName = 'recording-' + Date.now() + path.extname('.mp3');  // Use .mp3 extension
+    const fileext=path.extname(file.originalname);
+    const fileName = 'recording-' + Date.now() + fileext;  // Use .mp3 extension
     cb(null, fileName);
   }
 });
@@ -130,6 +131,16 @@ const storage = multer.diskStorage({
 // Init upload
 const upload = multer({
   storage: storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /mp3|mpeg|wav|webm|ogg/;  // Allowed file types
+    const mimetype = filetypes.test(file.mimetype);  // Check MIME type
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());  // Check file extension
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('File type not supported'));
+  },
   limits: { fileSize: 10000000 },  // Limit file size to 10MB
 }).single('audio');
 
