@@ -32,7 +32,7 @@ const upload = multer({
     cb(new Error('File type not supported'));
   },
   dest: 'uploads/'  // Files will be saved in the 'uploads' directory
-});
+}).single('audio');
 
 // Ensure 'uploads/' directory exists
 const fs = require('fs');
