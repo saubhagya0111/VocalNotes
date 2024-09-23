@@ -41,7 +41,7 @@ if (!fs.existsSync('./uploads')) {
 }
 
 // API endpoint for handling audio uploads
-app.post('/upload-audio', upload.single('audio'), (req, res) => {
+app.post('/upload-audio',upload,function(req, res,next) {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
@@ -60,7 +60,7 @@ const openai = new OpenAI({
 });
 
 // Transcription route
-app.post('/transcribe-audio', upload.single('audio'), async (req, res) => {
+app.post('/transcribe-audio',upload, async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
