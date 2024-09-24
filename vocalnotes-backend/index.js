@@ -110,28 +110,47 @@ const Transcription = require('./models/Transcription');  // Import the transcri
 
 // Search route for transcriptions
 app.get('/search-transcriptions', async (req, res) => {
-  const searchQuery = req.query.q;  // Get the search query from URL query string
+  const searchQuery = req.query.q?.trim();  // Get the search query from URL query string and trim it
+  const page = parseInt(req.query.page) || 1;  // Default to page 1
+  const limit = parseInt(req.query.limit) || 10;  // Default to 10 results per page
+  const skip = (page - 1) * limit;  // Calculate how many documents to skip for pagination
 
-  if (!searchQuery || typeof searchQuery !== 'string') {
-    return res.status(400).json({ message: 'Search failed', error: 'Search text must be a valid string' });
+  // Validate that the search query is provided
+  if (!searchQuery || searchQuery.length === 0) {
+    return res.status(400).json({ message: 'Search failed', error: 'Search text must be a valid, non-empty string' });
   }
 
   try {
-    // Perform a MongoDB text search
-    const results = await Transcription.find({ 
-      $text: { $search: searchQuery }
-    });
+    // Perform a partial search using regex (case-sensitive by default)
+    const query = {
+      $text: { $search: searchQuery }  // full text search
+    };
+
+    // Fetch the results with pagination
+    const results = await Transcription.find(query)
+      .skip(skip)  // Skip results based on the current page
+      .limit(limit);  // Limit the number of results returned
+
+    // Count total documents that match the search query for pagination
+    const total = await Transcription.countDocuments(query);
 
     if (results.length === 0) {
       return res.status(404).json({ message: 'No transcriptions found' });
     }
 
-    res.status(200).json({ message: 'Search results', results });
+    res.status(200).json({
+      message: 'Search results',
+      results,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)  // Calculate the total number of pages
+    });
   } catch (error) {
     console.error('Search failed:', error.message);
     res.status(500).json({ message: 'Search failed', error: error.message });
   }
 });
+
 
 
 // Route to retrieve all transcriptions
