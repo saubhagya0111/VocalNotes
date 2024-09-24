@@ -6,6 +6,13 @@ require('dotenv').config();
 const path=require('path');
 const axios = require('axios');
 const FormData = require('form-data');
+const mongoose=require('mongoose');
+// Replace this with your MongoDB connection string
+const dbURI = 'mongodb://localhost:27017/audionotes';
+
+mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.log('MongoDB connection error:', err));
 
 // Enable CORS for communication between frontend and backend
 app.use(cors({ origin: 'http://localhost:3000' }));
@@ -82,6 +89,13 @@ app.post('/transcribe-audio',upload, async (req, res) => {
     });
 
     const transcription = response.data.text;  // Extract transcription text
+
+    const newTranscription = new Transcription({
+      file: req.file.filename,
+      transcription: response.data.text
+    });
+    await newTranscription.save();
+
     res.status(200).json({
       message: 'Transcription successful',
       transcription: transcription,
@@ -91,6 +105,49 @@ app.post('/transcribe-audio',upload, async (req, res) => {
     res.status(500).json({ message: 'Transcription failed', error: error.message });
   }
 });
+
+const Transcription = require('./models/Transcription');  // Import the transcription model
+
+// Search route for transcriptions
+app.get('/search-transcriptions', async (req, res) => {
+  const searchQuery = req.query.q;  // Get the search query from URL query string
+
+  if (!searchQuery || typeof searchQuery !== 'string') {
+    return res.status(400).json({ message: 'Search failed', error: 'Search text must be a valid string' });
+  }
+
+  try {
+    // Perform a MongoDB text search
+    const results = await Transcription.find({ 
+      $text: { $search: searchQuery }
+    });
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'No transcriptions found' });
+    }
+
+    res.status(200).json({ message: 'Search results', results });
+  } catch (error) {
+    console.error('Search failed:', error.message);
+    res.status(500).json({ message: 'Search failed', error: error.message });
+  }
+});
+
+
+// Route to retrieve all transcriptions
+app.get('/transcriptions', async (req, res) => {
+  try {
+    const transcriptions = await Transcription.find();  // Find all transcriptions in the database
+    res.status(200).json({
+      message: 'Transcriptions fetched successfully',
+      transcriptions: transcriptions
+    });
+  } catch (error) {
+    console.error('Error fetching transcriptions:', error.message);
+    res.status(500).json({ message: 'Error fetching transcriptions', error: error.message });
+  }
+});
+
 
 // Start server on port 5000
 const PORT = 5000;

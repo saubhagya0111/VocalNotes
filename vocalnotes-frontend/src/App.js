@@ -1,6 +1,8 @@
 import React from "react";
-import AudioRecorder from "./AudioRecorder";
-import AudioTranscriber from "./AudioTranscriber";
+import AudioRecorder from './components/AudioRecorder';
+import AudioTranscriber from './components/AudioTranscriber';
+import SearchTranscriptions from "./components/SearchTranscriptions";
+
 
 function App() {
   return (
@@ -8,6 +10,7 @@ function App() {
       <h1>Vocal Notes Recording</h1>
       <AudioRecorder />
       <AudioTranscriber />
+      <SearchTranscriptions/>
     </div>
   );
 }
