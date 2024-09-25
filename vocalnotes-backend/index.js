@@ -9,6 +9,7 @@ const FormData = require('form-data');
 const mongoose=require('mongoose');
 // Replace this with your MongoDB connection string
 const dbURI = 'mongodb://localhost:27017/audionotes';
+const exportRoutes = require('./routes/exportRoutes');  // Import the export routes
 
 mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
@@ -167,6 +168,19 @@ app.get('/transcriptions', async (req, res) => {
   }
 });
 
+const path1 = '/Users/saubhagyachopra/Dev/VocalNotes/vocalnotes-backend/exports';  // Adjust with the correct path
+
+fs.access(path1, fs.constants.W_OK, (err) => {
+  if (err) {
+    console.error(`No write permission for the directory: ${path1}`);
+  } else {
+    console.log(`Write permission granted for the directory: ${path1}`);
+  }
+});
+
+
+app.use(express.json());
+app.use('/exports', exportRoutes);
 
 // Start server on port 5000
 const PORT = 5000;
