@@ -8,7 +8,7 @@ const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 // Use absolute path for the exports directory
 const exportDir = path.resolve(__dirname, '../exports');
-console.log('Export directory=,${exportDir}');
+console.log(`Export directory=${exportDir}`);
 if (!fs.existsSync(exportDir)) {
   fs.mkdirSync(exportDir, { recursive: true });  // Ensure the directory is created
 }
@@ -54,10 +54,10 @@ router.post('/export-pdf', (req, res) => {
           }
           console.log('File sent to the client:', filePath);
   
-          // Optionally delete the file after sending it
-          fs.unlink(filePath, (err) => {
-            if (err) console.error('Error deleting file:', err);
-          });
+        //   // Optionally delete the file after sending it
+        //   fs.unlink(filePath, (err) => {
+        //     if (err) console.error('Error deleting file:', err);
+        //   });
         });
       });
     });
@@ -71,35 +71,58 @@ router.post('/export-pdf', (req, res) => {
   
 
 // Route to export transcribed text as Word document
+// const exportDir = path.resolve(__dirname, '../exports');
+console.log(`Export directory path: ${exportDir}`);
+
+if (!fs.existsSync(exportDir)) {
+  console.log('Creating exports directory...');
+  fs.mkdirSync(exportDir, { recursive: true });
+}
+
+// Route to export transcribed text as Word document
 router.post('/export-word', async (req, res) => {
   const transcription = req.body.text;
 
-  if (!transcription) {
-    return res.status(400).json({ message: 'No transcription text provided' });
+  if (!transcription || typeof transcription !== 'string') {
+    return res.status(400).json({ message: 'Invalid transcription text' });
   }
-
-  const doc = new Document();
-  const paragraphs = transcription.split('\n').map(line => new Paragraph(line));
-
-  doc.addSection({ children: paragraphs });
 
   const fileName = `transcription-${Date.now()}.docx`;
   const filePath = path.join(exportDir, fileName);
 
   try {
     console.log(`Saving Word document to: ${filePath}`);
+
+    // Create a new document with a valid section and paragraphs
+    const doc = new Document({
+      sections: [
+        {
+          properties: {}, // Can define section properties like page size, etc.
+          children: transcription.split('\n').map(line => new Paragraph(line)), // Add the transcription text as paragraphs
+        },
+      ],
+    });
+
+    // Generate the Word document buffer
     const buffer = await Packer.toBuffer(doc);
+
+    // Save the document to the file system
     fs.writeFileSync(filePath, buffer);
 
     console.log('Word document saved at:', filePath);
+
+    // Send the file to the client
     res.download(filePath, (err) => {
       if (err) {
         console.error('Error sending file:', err);
-        res.status(500).json({ message: 'Error exporting as Word document' });
+        return res.status(500).json({ message: 'Error exporting as Word document' });
       }
-      fs.unlink(filePath, (err) => {
-        if (err) console.error('Error deleting file:', err);
-      });
+      console.log('File sent to the client:', filePath);
+
+      // Optionally, delete the file after sending it
+      // fs.unlink(filePath, (err) => {
+      //   if (err) console.error('Error deleting file:', err);
+      // });
     });
   } catch (error) {
     console.error('Error creating Word file:', error);
@@ -141,9 +164,9 @@ router.post('/export-csv', (req, res) => {
           console.error('Error sending file:', err);
           res.status(500).json({ message: 'Error exporting as CSV' });
         }
-        fs.unlink(filePath, (err) => {
-          if (err) console.error('Error deleting file:', err);
-        });
+        // fs.unlink(filePath, (err) => {
+        //   if (err) console.error('Error deleting file:', err);
+        // });
       });
     })
     .catch((err) => {
