@@ -13,73 +13,7 @@ if (!fs.existsSync(exportDir)) {
   fs.mkdirSync(exportDir, { recursive: true });  // Ensure the directory is created
 }
 
-// Route to export transcribed text as PDF
-router.post('/export-pdf', (req, res) => {
-    const transcription = req.body.text;
-  
-    if (!transcription || typeof transcription !== 'string') {
-      return res.status(400).json({ message: 'Invalid transcription text' });
-    }
-  
-    const fileName = `transcription-${Date.now()}.pdf`;
-    const filePath = path.join(exportDir, fileName);
-  
-    // Log the path to make sure it's correct
-    console.log(`Saving PDF to: ${filePath}`);
-  
-    const doc = new PDFDocument();
-    const writeStream = fs.createWriteStream(filePath);
-  
-    // Write content to PDF and close the stream
-    doc.pipe(writeStream);
-    doc.text(transcription);
-    doc.end();  // Finalize the PDF document
-  
-    // Handle stream events
-    writeStream.on('finish', () => {
-      console.log('PDF saved at:', filePath);
-      
-      // Check if file exists before sending it
-      fs.access(filePath, fs.constants.F_OK, (err) => {
-        if (err) {
-          console.error('File does not exist:', filePath);
-          return res.status(404).json({ message: 'File not found' });
-        }
-  
-        // Send the file to the client
-        res.download(filePath, (err) => {
-          if (err) {
-            console.error('Error sending file:', err);
-            return res.status(500).json({ message: 'Error exporting as PDF' });
-          }
-          console.log('File sent to the client:', filePath);
-  
-        //   // Optionally delete the file after sending it
-        //   fs.unlink(filePath, (err) => {
-        //     if (err) console.error('Error deleting file:', err);
-        //   });
-        });
-      });
-    });
-  
-    writeStream.on('error', (err) => {
-      console.error('Stream error during writing:', err);
-      res.status(500).json({ message: 'Error during PDF export' });
-    });
-  });
-
-  
-
-// Route to export transcribed text as Word document
-// const exportDir = path.resolve(__dirname, '../exports');
-console.log(`Export directory path: ${exportDir}`);
-
-if (!fs.existsSync(exportDir)) {
-  console.log('Creating exports directory...');
-  fs.mkdirSync(exportDir, { recursive: true });
-}
-
-// Route to export transcribed text as Word document
+// Route to export transcribed text as word
 router.post('/export-word', async (req, res) => {
   const transcription = req.body.text;
 
@@ -93,12 +27,11 @@ router.post('/export-word', async (req, res) => {
   try {
     console.log(`Saving Word document to: ${filePath}`);
 
-    // Create a new document with a valid section and paragraphs
+    // Create a new document and add the transcription as paragraphs
     const doc = new Document({
       sections: [
         {
-          properties: {}, // Can define section properties like page size, etc.
-          children: transcription.split('\n').map(line => new Paragraph(line)), // Add the transcription text as paragraphs
+          children: transcription.split('\n').map(line => new Paragraph(line)), // Add each line as a new paragraph
         },
       ],
     });
@@ -120,19 +53,86 @@ router.post('/export-word', async (req, res) => {
       console.log('File sent to the client:', filePath);
 
       // Optionally, delete the file after sending it
-      // fs.unlink(filePath, (err) => {
-      //   if (err) console.error('Error deleting file:', err);
-      // });
+      fs.unlink(filePath, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
     });
   } catch (error) {
     console.error('Error creating Word file:', error);
-    res.status(500).json({ message: 'Error exporting as Word document' });
+    if (!res.headersSent) {
+      return res.status(500).json({ message: 'Error exporting as Word document', error: error.message });
+    }
+  }
+});
+
+  
+
+// Route to export transcribed text as Word document
+// const exportDir = path.resolve(__dirname, '../exports');
+console.log(`Export directory path: ${exportDir}`);
+
+if (!fs.existsSync(exportDir)) {
+  console.log('Creating exports directory...');
+  fs.mkdirSync(exportDir, { recursive: true });
+}
+
+router.post('/export-pdf', (req, res) => {
+  const transcription = req.body.text;
+
+  if (!transcription || typeof transcription !== 'string') {
+    return res.status(400).json({ message: 'Invalid transcription text' });
+  }
+
+  const fileName = `transcription-${Date.now()}.pdf`;
+  const filePath = path.join(exportDir, fileName);
+
+  try {
+    console.log(`Saving PDF to: ${filePath}`);
+
+    const doc = new PDFDocument();
+    const writeStream = fs.createWriteStream(filePath);
+
+    // Write content to PDF and close the stream
+    doc.pipe(writeStream);
+    doc.text(transcription);
+    doc.end();  // Finalize the PDF document
+
+    writeStream.on('finish', () => {
+      console.log('PDF saved at:', filePath);
+
+      // Send the file to the client
+      res.download(filePath, (err) => {
+        if (err) {
+          console.error('Error sending file:', err);
+          return res.status(500).json({ message: 'Error exporting as PDF' });
+        }
+        console.log('File sent to the client:', filePath);
+
+        // Optionally, delete the file after sending it
+        // fs.unlink(filePath, (err) => {
+        //   if (err) console.error('Error deleting file:', err);
+        // });
+      });
+    });
+
+    // Handle stream errors
+    writeStream.on('error', (err) => {
+      console.error('Stream error during writing:', err);
+      if (!res.headersSent) {
+        return res.status(500).json({ message: 'Error during PDF export' });
+      }
+    });
+  } catch (error) {
+    console.error('Error creating PDF file:', error);
+    if (!res.headersSent) {
+      return res.status(500).json({ message: 'PDF export failed', error: error.message });
+    }
   }
 });
 
 // Route to export transcribed text as CSV
 router.post('/export-csv', (req, res) => {
-  const transcription = req.body.text;
+  const transcription = req.body.text;  // Ensure it's receiving 'text'
 
   if (!transcription) {
     return res.status(400).json({ message: 'No transcription text provided' });
@@ -164,6 +164,7 @@ router.post('/export-csv', (req, res) => {
           console.error('Error sending file:', err);
           res.status(500).json({ message: 'Error exporting as CSV' });
         }
+        // Optionally delete the file after sending it
         // fs.unlink(filePath, (err) => {
         //   if (err) console.error('Error deleting file:', err);
         // });
