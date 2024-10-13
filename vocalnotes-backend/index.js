@@ -7,6 +7,8 @@ const path=require('path');
 const axios = require('axios');
 const FormData = require('form-data');
 const mongoose=require('mongoose');
+const folderRoutes = require('./routes/folderRoutes');
+const bodyParser=require('body-parser')
 // Replace this with your MongoDB connection string
 const dbURI = 'mongodb://localhost:27017/audionotes';
 const exportRoutes = require('./routes/exportRoutes');  // Import the export routes
@@ -177,11 +179,21 @@ fs.access(path1, fs.constants.W_OK, (err) => {
     console.log(`Write permission granted for the directory: ${path1}`);
   }
 });
-
-
 app.use(express.json());
+app.use('/api/folders', folderRoutes);
+
+// app.use(bodyParser.urlencoded({ extended: true }));  // Also, add URL encoding parser for form data
+app.use(express.urlencoded({ extended: true }));
 app.use('/exports', exportRoutes);
 
+// app.post('/test', (req, res) => {
+//   console.log('Body:', req.body);
+//   res.send('Test complete');
+// });
+app.use((req, res, next) => {
+  console.log(`Request to ${req.path} with body:`, req.body);
+  next();
+});
 // Start server on port 5000
 const PORT = 5000;
 app.listen(PORT, () => {
