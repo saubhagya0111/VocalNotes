@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "csv-writer": "^1.6.0",
     "docx": "^8.5.0",
