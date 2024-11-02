@@ -107,6 +107,7 @@ app.post('/transcribe-audio',upload, async (req, res) => {
     res.status(200).json({
       message: 'Transcription successful',
       transcription: transcription,
+      id: newTranscription._id
     });
   } catch (error) {
     console.error('Transcription failed:', error.message);
