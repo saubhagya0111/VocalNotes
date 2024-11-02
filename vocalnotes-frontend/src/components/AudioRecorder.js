@@ -7,6 +7,12 @@ const AudioRecorder = () => {
   const [transcription, setTranscription] = useState(""); // For storing transcription
   const [loading, setLoading] = useState(false); // For loading state
   const [exporting, setExporting] = useState(false); // For export state
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const goToMultiLangSupport = () => {
+    navigate('/multi-lang-support'); // Navigate to the multi-language support screen
+  };
 
   // Start recording
   const startRecording = async () => {
@@ -110,7 +116,7 @@ const AudioRecorder = () => {
     <div>
       <h2>Record Audio</h2>
       {!recording ? (
-        <button onClick={startRecording}>Start Recording</button>
+        <><button onClick={goToMultiLangSupport}>{t('multiLangSupport')}</button><button onClick={startRecording}>Start Recording</button></>
       ) : (
         <button onClick={stopRecording}>Stop Recording</button>
       )}
