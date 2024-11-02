@@ -5,6 +5,7 @@ import AudioTranscriber from "./components/AudioTranscriber";
 import SearchTranscriptions from "./components/SearchTranscriptions";
 import MultiLangSupport from './components/MultiLangSupport'; // Import the component correctly
 import TranscriptionManager from './components/TranscriptionManager'; // Import new component
+import MultiLangTranslation from "./components/MultiLangTranslation";
 
 
 function App() {
@@ -15,7 +16,7 @@ function App() {
         <Routes>
           <Route path="/" element={<AudioRecorder />} />
           {/* <Route path="/multi-lang-support" element={<MultiLangSupport />} /> */}
-          <Route path="/transcription-manager/:id" element={<TranscriptionManager />} />
+          <Route path="/translate" element={<MultiLangTranslation />} />
         </Routes>
       </Router>
       {/* <AudioRecorder /> */}

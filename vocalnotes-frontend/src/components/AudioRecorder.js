@@ -138,6 +138,7 @@ const AudioRecorder = () => {
           <button onClick={() => handleExport("word")} disabled={exporting}>
             {exporting ? "Exporting Word..." : "Export as Word"}
           </button>
+          <button onClick={() => navigate('/translate')}>Go to Multi-Lang Translation</button>
         </div>
       )}
     </div>
