@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useTranslation } from 'react-i18next'; // Add this line
+import { useNavigate } from 'react-router-dom'; // Add this line
 
 const AudioRecorder = () => {
   const [recording, setRecording] = useState(false);
@@ -10,9 +12,9 @@ const AudioRecorder = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const goToMultiLangSupport = () => {
-    navigate('/multi-lang-support'); // Navigate to the multi-language support screen
-  };
+  // const goToMultiLangSupport = () => {
+  //   navigate('/multi-lang-support'); // Navigate to the multi-language support screen
+  // };
 
   // Start recording
   const startRecording = async () => {
@@ -116,11 +118,10 @@ const AudioRecorder = () => {
     <div>
       <h2>Record Audio</h2>
       {!recording ? (
-        <><button onClick={goToMultiLangSupport}>{t('multiLangSupport')}</button><button onClick={startRecording}>Start Recording</button></>
+        <button onClick={startRecording}>Start Recording</button>
       ) : (
         <button onClick={stopRecording}>Stop Recording</button>
       )}
-
       {/* Show the transcription result */}
       {loading && <p>Transcribing...</p>}
       {transcription && (

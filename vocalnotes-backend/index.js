@@ -8,14 +8,19 @@ const axios = require('axios');
 const FormData = require('form-data');
 const mongoose=require('mongoose');
 const folderRoutes = require('./routes/folderRoutes');
-const bodyParser=require('body-parser')
+const bodyParser = require('body-parser')
+const i18nMiddleware = require('i18next-http-middleware');
+const i18n = require('./i18n'); // Import the i18n configuration
 // Replace this with your MongoDB connection string
-const dbURI = 'mongodb://localhost:27017/audionotes';
+const dbURI = 'mongodb://127.0.0.1:27017/audionotes';
 const exportRoutes = require('./routes/exportRoutes');  // Import the export routes
+const translateRoute = require('./routes/translateRoutes');
+
+
 
 mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.log('MongoDB connection error:', err));
+.then(() => console.log('Connected to MongoDB'))
+.catch(err => console.log('MongoDB connection error:', err));
 
 // Enable CORS for communication between frontend and backend
 app.use(cors({ origin: 'http://localhost:3000' }));
@@ -35,7 +40,7 @@ const upload = multer({
     const filetypes = /mp3|mpeg|wav|webm|ogg/;  // Allowed file types
     const mimetype = filetypes.test(file.mimetype);  // Check MIME type
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());  // Check file extension
-
+    
     if (mimetype && extname) {
       return cb(null, true);
     }
@@ -55,7 +60,7 @@ app.post('/upload-audio',upload,function(req, res,next) {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
-
+  
   // Return a response indicating a successful upload
   res.status(200).json({
     message: 'Audio uploaded successfully',
@@ -78,11 +83,11 @@ app.post('/transcribe-audio',upload, async (req, res) => {
   try {
     const audioFilePath = `./uploads/${req.file.filename}`;
     const formData = new FormData();
-
+    
     // Append the file and model to FormData
     formData.append('file', fs.createReadStream(audioFilePath));
     formData.append('model', 'whisper-1');
-
+    
     // Send file to OpenAI's Whisper API for transcription
     const response = await axios.post('https://api.openai.com/v1/audio/transcriptions', formData, {
       headers: {
@@ -90,9 +95,9 @@ app.post('/transcribe-audio',upload, async (req, res) => {
         ...formData.getHeaders(),
       },
     });
-
+    
     const transcription = response.data.text;  // Extract transcription text
-
+    
     const newTranscription = new Transcription({
       file: req.file.filename,
       transcription: response.data.text
@@ -122,21 +127,21 @@ app.get('/search-transcriptions', async (req, res) => {
   if (!searchQuery || searchQuery.length === 0) {
     return res.status(400).json({ message: 'Search failed', error: 'Search text must be a valid, non-empty string' });
   }
-
+  
   try {
     // Perform a partial search using regex (case-sensitive by default)
     const query = {
       $text: { $search: searchQuery }  // full text search
     };
-
+    
     // Fetch the results with pagination
     const results = await Transcription.find(query)
-      .skip(skip)  // Skip results based on the current page
-      .limit(limit);  // Limit the number of results returned
-
+    .skip(skip)  // Skip results based on the current page
+    .limit(limit);  // Limit the number of results returned
+    
     // Count total documents that match the search query for pagination
     const total = await Transcription.countDocuments(query);
-
+    
     if (results.length === 0) {
       return res.status(404).json({ message: 'No transcriptions found' });
     }
@@ -153,9 +158,16 @@ app.get('/search-transcriptions', async (req, res) => {
     res.status(500).json({ message: 'Search failed', error: error.message });
   }
 });
+app.use(express.json());
+app.use(i18nMiddleware.handle(i18n)); // Add this line for i18n support
+app.use(express.urlencoded({ extended: true }));
 
+//Route to get translation for the transcriptions
+app.get('/greet', (req, res) => {
+  res.send({ message: req.t('welcomeMessage') }); // Use `req.t()` for translations
+});
 
-
+app.use('/api', translateRoute);
 // Route to retrieve all transcriptions
 app.get('/transcriptions', async (req, res) => {
   try {
@@ -179,7 +191,7 @@ fs.access(path1, fs.constants.W_OK, (err) => {
     console.log(`Write permission granted for the directory: ${path1}`);
   }
 });
-app.use(express.json());
+
 app.use('/api/folders', folderRoutes);
 
 // app.use(bodyParser.urlencoded({ extended: true }));  // Also, add URL encoding parser for form data
