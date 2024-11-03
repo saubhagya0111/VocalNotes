@@ -9,12 +9,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Route to translate transcription
-router.post("/translate-transcription/:id", async (req, res) => {
-  const { id } = req.params;
+// Route to translate the most recent transcription
+router.post("/translate-latest-transcription", async (req, res) => {
   const { targetLang } = req.body;
 
-  console.log("Received request to translate transcription with ID:", id);
+  console.log("Received request to translate the latest transcription");
   console.log("Target language specified:", targetLang);
 
   if (!targetLang) {
@@ -23,20 +22,23 @@ router.post("/translate-transcription/:id", async (req, res) => {
   }
 
   try {
-    console.log("Fetching transcription from database...");
-    const transcription = await Transcription.findById(id);
+    console.log("Fetching the most recent transcription from the database...");
+    const latestTranscription = await Transcription.findOne().sort({ createdAt: -1 });
 
-    if (!transcription) {
-      console.log("Transcription not found for ID:", id);
-      return res.status(404).json({ message: "Transcription not found" });
+    if (!latestTranscription) {
+      console.log("No transcriptions found in the database");
+      return res.status(404).json({ message: "No transcriptions found" });
     }
 
-    console.log("Transcription found:", transcription.text);
+    console.log("Latest transcription found:", latestTranscription.text);
 
     // Request translation using OpenAI API
-    const prompt = `Translate the following text to ${targetLang}:\n\n${transcription.text}`;
+    const prompt = `Translate the following text to ${targetLang}:
+
+${latestTranscription.text}`;
     console.log("Generated prompt for OpenAI:", prompt);
 
+    console.log("Sending request to OpenAI API...");
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // Replace with "gpt-4" if available
       messages: [{ role: "user", content: prompt }],
@@ -46,16 +48,19 @@ router.post("/translate-transcription/:id", async (req, res) => {
     console.log("Received response from OpenAI API");
     console.log("OpenAI response data:", response);
 
-    const translatedText = response.choices[0].message.content.trim();
-    console.log("Translated text:", translatedText);
+    // Check if the response contains the choices property
+    if (response && response.choices && response.choices.length > 0) {
+      const translatedText = response.choices[0].message.content.trim();
+      console.log("Translated text:", translatedText);
 
-    res.status(200).json({ originalText: transcription.text, translatedText });
+      res.status(200).json({ originalText: latestTranscription.text, translatedText, id: latestTranscription._id });
+    } else {
+      console.error("Unexpected response structure from OpenAI API:", response);
+      res.status(500).json({ message: "Unexpected response from OpenAI API" });
+    }
   } catch (error) {
     console.error("Error during translation process:", error);
-    res.status(500).json({
-      message: "Error translating transcription",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Error translating transcription", error: error.message });
   }
 });
 

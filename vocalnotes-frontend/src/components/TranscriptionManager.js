@@ -10,26 +10,30 @@ const TranscriptionManager = ({ transcriptionId }) => {
         setTargetLang(lang);
     };
 
-    const handleTranslate = async () => {
+    const handleTranslateLatest = async (selectedLanguage) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/translate-transcription/${transcriptionId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ targetLang }),
-            });
-            const result = await response.json();
+          const response = await fetch('http://localhost:5000/api/translate-latest-transcription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ targetLang: selectedLanguage }),
+          });
+      
+          const result = await response.json();
+          if (result.translatedText) {
+            console.log('Translated Text:', result.translatedText);
             setTranslatedText(result.translatedText);
+          }
         } catch (error) {
-            console.error('Error translating transcription:', error);
+          console.error('Error translating the latest transcription:', error);
         }
-    };
+      };
 
     return (
         <div>
             <LanguageSelector onSelectLanguage={handleLanguageSelect} />
-            <button onClick={handleTranslate}>Translate</button>
+            <button onClick={handleTranslateLatest}>Translate</button>
             {translatedText && <p>Translated Text: {translatedText}</p>}
         </div>
     );
